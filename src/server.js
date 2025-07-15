@@ -277,41 +277,28 @@ app.get('/api/docs', (req, res) => {
             </div>
             
             <div class="section">
-                <h2>🚀 API Endpoints</h2>
-                
-                <div class="endpoint">
-                    <h3><span class="method post">POST</span> /api/gemini/:model/generateContent</h3>
-                    <p>Generate content using the specified Gemini model</p>
+                <h2>🚀 Transparent Proxy</h2>
+                <div class="auth-box">
+                    <h3>🎯 Super Simple Integration</h3>
+                    <p><strong>Just replace Google's base URL with ours!</strong></p>
+                    <div style="margin: 15px 0;">
+                        <p><strong>Before:</strong> <span class="code">https://generativelanguage.googleapis.com</span></p>
+                        <p><strong>After:</strong> <span class="code">https://gemini-proxy-193126246557.us-central1.run.app/api/gemini</span></p>
+                    </div>
+                    <p>Everything else stays exactly the same - paths, request bodies, response format!</p>
                 </div>
                 
                 <div class="endpoint">
-                    <h3><span class="method post">POST</span> /api/gemini/:model/streamGenerateContent</h3>
-                    <p>Stream generate content using the specified Gemini model</p>
-                </div>
-                
-                <div class="endpoint">
-                    <h3><span class="method post">POST</span> /api/gemini/:model/countTokens</h3>
-                    <p>Count tokens for input content with the specified model</p>
-                </div>
-                
-                <div class="endpoint">
-                    <h3><span class="method post">POST</span> /api/gemini/:model/embeddings</h3>
-                    <p>Generate embeddings using embedding models only</p>
-                </div>
-                
-                <div class="endpoint">
-                    <h3><span class="method get">GET</span> /api/gemini/models</h3>
-                    <p>List all available Gemini models</p>
-                </div>
-                
-                <div class="endpoint">
-                    <h3><span class="method get">GET</span> /api/gemini/usage</h3>
-                    <p>Get current user usage statistics and limits</p>
-                </div>
-                
-                <div class="endpoint">
-                    <h3><span class="method get">GET</span> /api/gemini/health</h3>
-                    <p>Health check for Gemini service</p>
+                    <h3><span class="method get">GET</span> /api/gemini/* (Any Path)</h3>
+                    <p><strong>Transparent proxy to Google Gemini API</strong> - forwards all requests exactly as-is</p>
+                    <p>Examples:</p>
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        <li><span class="code">/api/gemini/v1beta/models</span></li>
+                        <li><span class="code">/api/gemini/v1beta/models/gemini-1.5-flash:generateContent</span></li>
+                        <li><span class="code">/api/gemini/v1beta/models/gemini-1.5-flash:streamGenerateContent</span></li>
+                        <li><span class="code">/api/gemini/v1beta/models/gemini-1.5-flash:countTokens</span></li>
+                        <li><span class="code">/api/gemini/v1beta/models/text-embedding-004:embedContent</span></li>
+                    </ul>
                 </div>
                 
                 <div class="endpoint">
@@ -402,20 +389,43 @@ app.get('/api/docs', (req, res) => {
             </div>
             
             <div class="section">
-                <h2>📊 Usage Example</h2>
+                <h2>📊 Usage Examples</h2>
+                
+                <h3 style="color: #2c3e50; margin-bottom: 15px;">🐍 Python Integration</h3>
+                <div style="background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 6px; overflow-x: auto; margin-bottom: 20px;">
+                    <pre style="margin: 0; font-family: 'Courier New', monospace;">import requests
+
+# Just change the base URL!
+url = "https://gemini-proxy-193126246557.us-central1.run.app/api/gemini/v1beta/models/gemini-1.5-flash:generateContent"
+headers = {
+    "Authorization": "Bearer YOUR_SUPABASE_JWT_TOKEN",
+    "Content-Type": "application/json"
+}
+data = {
+    "contents": [{"parts": [{"text": "Hello, AI!"}]}]
+}
+
+response = requests.post(url, headers=headers, json=data)
+print(response.json())</pre>
+                </div>
+
+                <h3 style="color: #2c3e50; margin-bottom: 15px;">🌐 cURL Examples</h3>
                 <div style="background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 6px; overflow-x: auto;">
-                    <pre style="margin: 0; font-family: 'Courier New', monospace;">
-curl -X POST "https://gemini-proxy-193126246557.us-central1.run.app/api/gemini/gemini-1.5-flash/generateContent" \\
-  -H "Content-Type: application/json" \\
+                    <pre style="margin: 0; font-family: 'Courier New', monospace;"># List models
+curl "https://gemini-proxy-193126246557.us-central1.run.app/api/gemini/v1beta/models" \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Generate content
+curl "https://gemini-proxy-193126246557.us-central1.run.app/api/gemini/v1beta/models/gemini-1.5-flash:generateContent" \\
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
-  -d '{
-    "contents": [{
-      "parts": [{
-        "text": "Write a short poem about AI"
-      }],
-      "role": "user"
-    }]
-  }'</pre>
+  -H "Content-Type: application/json" \\
+  -d '{"contents":[{"parts":[{"text":"Write a poem"}]}]}'
+
+# Count tokens
+curl "https://gemini-proxy-193126246557.us-central1.run.app/api/gemini/v1beta/models/gemini-1.5-flash:countTokens" \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"contents":[{"parts":[{"text":"Count these tokens"}]}]}'</pre>
                 </div>
             </div>
         </div>
