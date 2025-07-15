@@ -1,0 +1,71 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
+      - '.'
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '3000'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '1'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '100'
+      - '--timeout'
+      - '300'
+      - '--concurrency'
+      - '80'
+      - '--vpc-connector'
+      - '${_VPC_CONNECTOR_NAME}'
+      - '--set-env-vars'
+      - 'NODE_ENV=production,PORT=3000,SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},SUPABASE_SERVICE_ROLE=${_SUPABASE_SERVICE_ROLE},GEMINI_API_KEY=${_GEMINI_API_KEY}'
+
+substitutions:
+  _SERVICE_NAME: 'gemini-proxy'
+  _REGION: 'us-central1'
+  _VPC_CONNECTOR_NAME: 'gemini-proxy-connector'
+  _SUPABASE_URL: 'https://bvhsrithcvbzoeogcbyb.supabase.co'
+  # These should be stored as secrets in Google Secret Manager
+  _SUPABASE_ANON_KEY: 'REPLACE_WITH_SECRET_REFERENCE'
+  _SUPABASE_SERVICE_ROLE: 'REPLACE_WITH_SECRET_REFERENCE'
+  _GEMINI_API_KEY: 'REPLACE_WITH_SECRET_REFERENCE'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+# Optional: Specify timeout
+timeout: 1200s 

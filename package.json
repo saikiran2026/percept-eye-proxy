@@ -1,0 +1,44 @@
+{
+  "name": "percepteye-proxy",
+  "version": "1.0.0",
+  "description": "Proxy server for Google Generative AI APIs with Supabase authentication",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "build": "echo 'No build step required'",
+    "test": "jest"
+  },
+  "keywords": [
+    "proxy",
+    "gemini",
+    "google-ai",
+    "supabase",
+    "rate-limiting"
+  ],
+  "author": "PerceptEye",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "express-slow-down": "^2.0.1",
+    "@supabase/supabase-js": "^2.38.4",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "winston": "^3.11.0",
+    "uuid": "^9.0.1",
+    "joi": "^17.11.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 
