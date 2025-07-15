@@ -25,8 +25,8 @@ RUN mkdir -p logs && chown -R proxy:nodejs logs
 # Switch to non-root user
 USER proxy
 
-# Expose port
-EXPOSE 3000
+# Expose ports for HTTP and gRPC
+EXPOSE 8080 9090
 
 # Set environment to production
 ENV NODE_ENV=production

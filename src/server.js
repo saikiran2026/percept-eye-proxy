@@ -12,8 +12,10 @@ const { globalRateLimit, speedLimiter } = require('./middleware/rateLimiter');
 
 // Import routes
 const geminiRoutes = require('./routes/gemini');
+const GrpcProxy = require('./grpc-proxy');
 
 const app = express();
+const grpcProxy = new GrpcProxy();
 
 // Trust proxy (important for Cloud Run)
 app.set('trust proxy', 1);
@@ -85,48 +87,348 @@ app.get('/health', (req, res) => {
 
 // API documentation endpoint
 app.get('/api/docs', (req, res) => {
-  res.json({
-    service: 'PerceptEye Gemini Proxy',
-    version: '1.0.0',
-    description: 'Proxy server for Google Generative AI APIs with authentication and rate limiting',
-    endpoints: {
-      'POST /api/gemini/:model/generateContent': 'Generate content using specified model',
-      'POST /api/gemini/:model/streamGenerateContent': 'Stream generate content using specified model',
-      'POST /api/gemini/:model/countTokens': 'Count tokens for specified model',
-      'POST /api/gemini/:model/embeddings': 'Generate embeddings using embedding models',
-      'GET /api/gemini/models': 'List available models',
-      'GET /api/gemini/usage': 'Get user usage statistics',
-      'GET /api/gemini/health': 'Health check for Gemini service',
-      'GET /health': 'Service health check',
-      'GET /api/docs': 'API documentation'
-    },
-    authentication: {
-      type: 'Bearer Token',
-      description: 'Supabase JWT token required in Authorization header'
-    },
-    models: [
-      'gemini-2.5-pro',
-      'gemini-2.5-pro-latest',
-      'gemini-2.0-flash-exp',
-      'gemini-1.5-pro',
-      'gemini-1.5-pro-latest',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-flash-8b',
-      'gemini-1.5-flash-8b-latest',
-      'gemini-embedding-001',
-      'text-embedding-004',
-      'text-multilingual-embedding-002',
-      'gemini-pro',
-      'gemini-pro-vision'
-    ],
-    rateLimit: {
-      global: '1000 requests per 15 minutes per IP',
-      user: 'Based on subscription tier (free: 100/hour, pro: 1000/hour, premium: 5000/hour, enterprise: 10000/hour)',
-      tokens: 'Based on user limits (default: 10000 tokens/day)',
-      cost: 'Based on user limits (default: $50/day)'
-    }
-  });
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PerceptEye Gemini Proxy - API Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .endpoint {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+        
+        .endpoint h3 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        
+        .method {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-right: 10px;
+        }
+        
+        .method.get { background: #27ae60; color: white; }
+        .method.post { background: #e74c3c; color: white; }
+        
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .model-item {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #9b59b6;
+        }
+        
+        .auth-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .auth-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .limits-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .limits-table th,
+        .limits-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .limits-table th {
+            background: #3498db;
+            color: white;
+        }
+        
+        .limits-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #27ae60;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .code {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PerceptEye Gemini Proxy</h1>
+            <p>Secure API Gateway for Google Generative AI Models</p>
+            <div style="margin-top: 20px;">
+                <span class="status-badge">✓ Service Online</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>🔐 Authentication</h2>
+                <div class="auth-box">
+                    <h3>Required: Bearer Token</h3>
+                    <p>All API requests require a valid Supabase JWT token in the Authorization header:</p>
+                    <p><span class="code">Authorization: Bearer YOUR_JWT_TOKEN</span></p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🚀 API Endpoints</h2>
+                
+                <div class="endpoint">
+                    <h3><span class="method post">POST</span> /api/gemini/:model/generateContent</h3>
+                    <p>Generate content using the specified Gemini model</p>
+                </div>
+                
+                <div class="endpoint">
+                    <h3><span class="method post">POST</span> /api/gemini/:model/streamGenerateContent</h3>
+                    <p>Stream generate content using the specified Gemini model</p>
+                </div>
+                
+                <div class="endpoint">
+                    <h3><span class="method post">POST</span> /api/gemini/:model/countTokens</h3>
+                    <p>Count tokens for input content with the specified model</p>
+                </div>
+                
+                <div class="endpoint">
+                    <h3><span class="method post">POST</span> /api/gemini/:model/embeddings</h3>
+                    <p>Generate embeddings using embedding models only</p>
+                </div>
+                
+                <div class="endpoint">
+                    <h3><span class="method get">GET</span> /api/gemini/models</h3>
+                    <p>List all available Gemini models</p>
+                </div>
+                
+                <div class="endpoint">
+                    <h3><span class="method get">GET</span> /api/gemini/usage</h3>
+                    <p>Get current user usage statistics and limits</p>
+                </div>
+                
+                <div class="endpoint">
+                    <h3><span class="method get">GET</span> /api/gemini/health</h3>
+                    <p>Health check for Gemini service</p>
+                </div>
+                
+                <div class="endpoint">
+                    <h3><span class="method get">GET</span> /health</h3>
+                    <p>General service health check</p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🤖 Available Models</h2>
+                <div class="model-grid">
+                    <div class="model-item">
+                        <strong>gemini-2.5-pro</strong><br>
+                        Latest generation model
+                    </div>
+                    <div class="model-item">
+                        <strong>gemini-2.5-pro-latest</strong><br>
+                        Always up-to-date 2.5 Pro
+                    </div>
+                    <div class="model-item">
+                        <strong>gemini-2.0-flash-exp</strong><br>
+                        Experimental Flash model
+                    </div>
+                    <div class="model-item">
+                        <strong>gemini-1.5-pro</strong><br>
+                        High-quality text generation
+                    </div>
+                    <div class="model-item">
+                        <strong>gemini-1.5-flash</strong><br>
+                        Fast text generation
+                    </div>
+                    <div class="model-item">
+                        <strong>gemini-1.5-flash-8b</strong><br>
+                        Efficient 8B parameter model
+                    </div>
+                    <div class="model-item">
+                        <strong>gemini-embedding-001</strong><br>
+                        Text embeddings
+                    </div>
+                    <div class="model-item">
+                        <strong>text-embedding-004</strong><br>
+                        Advanced embeddings
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>⚡ Rate Limits</h2>
+                <table class="limits-table">
+                    <thead>
+                        <tr>
+                            <th>Subscription Tier</th>
+                            <th>Requests/Hour</th>
+                            <th>Tokens/Day</th>
+                            <th>Cost/Day</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Free</td>
+                            <td>100</td>
+                            <td>10,000</td>
+                            <td>$50</td>
+                        </tr>
+                        <tr>
+                            <td>Pro</td>
+                            <td>1,000</td>
+                            <td>Custom</td>
+                            <td>Custom</td>
+                        </tr>
+                        <tr>
+                            <td>Premium</td>
+                            <td>5,000</td>
+                            <td>Custom</td>
+                            <td>Custom</td>
+                        </tr>
+                        <tr>
+                            <td>Enterprise</td>
+                            <td>10,000</td>
+                            <td>Custom</td>
+                            <td>Custom</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+                    Global rate limit: 1000 requests per 15 minutes per IP address
+                </p>
+            </div>
+            
+            <div class="section">
+                <h2>📊 Usage Example</h2>
+                <div style="background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 6px; overflow-x: auto;">
+                    <pre style="margin: 0; font-family: 'Courier New', monospace;">
+curl -X POST "https://gemini-proxy-193126246557.us-central1.run.app/api/gemini/gemini-1.5-flash/generateContent" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
+  -d '{
+    "contents": [{
+      "parts": [{
+        "text": "Write a short poem about AI"
+      }],
+      "role": "user"
+    }]
+  }'</pre>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2025 PerceptEye - Gemini Proxy API v1.0.0 | Server Time: ${new Date().toISOString()}</p>
+        </div>
+    </div>
+</body>
+</html>`;
+  
+  res.set('Content-Type', 'text/html');
+  res.send(html);
 });
 
 // Routes
@@ -141,18 +443,12 @@ app.use(errorHandler);
 // Graceful shutdown handling
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Process terminated');
-    process.exit(0);
-  });
+  shutdown();
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Process terminated');
-    process.exit(0);
-  });
+  shutdown();
 });
 
 // Unhandled promise rejection handler
@@ -177,13 +473,33 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-// Start server
+// Start HTTP server
 const server = app.listen(config.port, () => {
-  logger.info('Server started', {
+  logger.info('HTTP Server started', {
     port: config.port,
     environment: config.nodeEnv,
     timestamp: new Date().toISOString()
   });
 });
+
+// Start gRPC server
+const grpcPort = process.env.GRPC_PORT || 9090;
+grpcProxy.start(grpcPort);
+
+// Graceful shutdown for both servers
+const shutdown = async () => {
+  logger.info('Shutting down servers...');
+  
+  // Close HTTP server
+  server.close(() => {
+    logger.info('HTTP server closed');
+  });
+  
+  // Close gRPC server
+  await grpcProxy.stop();
+  
+  logger.info('All servers shut down');
+  process.exit(0);
+};
 
 module.exports = app; 
